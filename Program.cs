@@ -17,6 +17,7 @@ namespace EkkoGod
         private static Menu Config;
         private static Spell Q, W, E, R;
         private static Orbwalking.Orbwalker Orbwalker;
+        private static SpellSlot ignite;
 
         static void Main(string[] args)
         {
@@ -41,6 +42,8 @@ namespace EkkoGod
             E = new Spell(SpellSlot.E, 450);
 
             R = new Spell(SpellSlot.R, 400);
+
+            ignite = Player.GetSpellSlot("summonerdot");
 
             Config = new Menu("Ekko God", "EkkoGod", true);
 
@@ -81,6 +84,7 @@ namespace EkkoGod
 
             Config.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             Config.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
+            Config.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
             Config.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(true));
             Config.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
             Config.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
@@ -159,7 +163,10 @@ namespace EkkoGod
             dmg += GetDamageE(hero);
             dmg += GetDamageR(hero);
             dmg += 15 + (12 * Player.Level) + Player.FlatMagicDamageMod; // passive damage
-
+            if (Player.Spellbook.CanUseSpell(Player.GetSpellSlot("summonerdot")) == SpellState.Ready)
+            {
+                dmg += Player.GetSummonerSpellDamage(hero, Damage.SummonerSpell.Ignite);
+            }
             return (float)dmg;
         }
 
@@ -169,6 +176,9 @@ namespace EkkoGod
             {
                 case Orbwalking.OrbwalkingMode.Combo:
                     Combo();
+                    break;
+                case Orbwalking.OrbwalkingMode.Mixed:
+                    Harass();
                     break;
             }
 
@@ -208,6 +218,7 @@ namespace EkkoGod
             var alone = HeroManager.Enemies.Count(scared => scared.Distance(Player.Position) <= 1000);
             var enemyCount = 0;
             var useW2 = Config.Item("UseWCombo2").GetValue<bool>();
+            var UseIgnite = Config.Item("UseIgnite").GetValue<bool>();
             if (ghost != null)
             {
                 enemyCount += HeroManager.Enemies.Count(enemy => enemy.Distance(ghost.Position) <= 400);
@@ -262,6 +273,11 @@ namespace EkkoGod
             else if (useRAoE && R.IsReady() && enemyCount >= AoECount.Value)
             {
                 R.Cast();
+            }
+
+            if (Player.Distance(target.ServerPosition) <= 600 && ComboDamage(target) >= target.Health && UseIgnite)
+            {
+                Player.Spellbook.CastSpell(ignite, target);
             }
         }
 
