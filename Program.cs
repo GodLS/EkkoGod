@@ -86,13 +86,14 @@ namespace EkkoGod
             Config.AddSubMenu(drawingsMenu);
 
             var miscMenu = new Menu("Misc", "Misc");
-            miscMenu.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             miscMenu.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
-            miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
+            miscMenu.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             miscMenu.AddItem(new MenuItem("WCC", "Cast W on Immobile").SetValue(true));
+            miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
             miscMenu.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(false));
             miscMenu.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
             miscMenu.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
+            Config.AddSubMenu(miscMenu);
 
             //Config.AddItem(new MenuItem("eToMinion", "E Minion After Manual E if Target Far").SetValue(true));
 
@@ -187,40 +188,38 @@ namespace EkkoGod
                     break;
             }
 
-            Killsteal();
             WCC();
+            Killsteal();
+            
             //RSafe();
         }
 
-        private static void WCC()
-        {
-            var WCC = Config.Item("WCC").GetValue<bool>();
-            if (WCC)
-            {
-                foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady()))
-                {
-                    var pred = W.GetPrediction(target);
-                    if (pred.Hitchance == HitChance.Immobile)
-                    {
-                        W.Cast(target.Position);
-                    }
-                }
-            }
-        }
+       private static void WCC()
+       {
+           var WCC = Config.Item("WCC").GetValue<bool>();
+           if (WCC)
+           {
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady()))
+               {
+                   if (target.IsStunned || target.IsRooted)
+                   {
+                       W.Cast(target.Position);
+                   }
+               }
+           }
+       }
 
-        private static void Killsteal()
-        {
-            var QKS = Config.Item("QKS").GetValue<bool>();
-            foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range))
-            {
-                if (QKS)
-                {
-                    Q.Cast(target);
-                }
-            }
-        }
-
-        
+       private static void Killsteal()
+       {
+           var KS = Config.Item("QKS").GetValue<bool>();
+           if (KS && !Player.IsDead)
+           {
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
+               {
+                   Q.Cast(target);
+               }
+           }
+       }
 
         //private static void RSafe()
         //{
