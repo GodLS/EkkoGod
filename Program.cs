@@ -286,7 +286,7 @@ namespace EkkoGod
         {
 
             var mana = Config.Item("harassMana").GetValue<Slider>().Value;
-            var useQ = Config.Item("UseQHarass").GetValue<bool>();
+            var useQ = Config.Item("useQHarass").GetValue<bool>();
 
             if (Player.ManaPercent < mana)
                 return;
