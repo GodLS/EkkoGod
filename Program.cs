@@ -199,7 +199,7 @@ namespace EkkoGod
            var WCC = Config.Item("WCC").GetValue<bool>();
            if (WCC)
            {
-               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady()))
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady() && Player.Distance(enemy.Position) < W.Range))
                {
                    if (target.HasBuffOfType(BuffType.Taunt) || target.HasBuffOfType(BuffType.Suppression) || target.HasBuffOfType(BuffType.Snare) || target.HasBuffOfType(BuffType.Knockup) || target.HasBuffOfType(BuffType.Fear) || target.HasBuffOfType(BuffType.Charm) || target.HasBuffOfType(BuffType.Stun))
                    {
