@@ -67,7 +67,8 @@ namespace EkkoGod
             Config.AddSubMenu(comboMenu);
 
             var harassMenu = new Menu("Harass", "Harass");
-            comboMenu.AddItem(new MenuItem("useQHarass", "Use Q in Harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("useQHarass", "Use Q in Harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("harassMana", "Mana Manager (%)").SetValue(new Slider(40, 1, 100)));
             Config.AddSubMenu(harassMenu);
 
             var drawingsMenu = new Menu("Drawings", "Drawings");
@@ -283,7 +284,12 @@ namespace EkkoGod
 
         private static void Harass()
         {
+
+            var mana = Config.Item("harassMana").GetValue<Slider>().Value;
             var useQ = Config.Item("UseQHarass").GetValue<bool>();
+
+            if (Player.ManaPercent < mana)
+                return;
 
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Magical);
             if (target == null)
