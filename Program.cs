@@ -41,7 +41,8 @@ namespace EkkoGod
 
             E = new Spell(SpellSlot.E, 450);
 
-            R = new Spell(SpellSlot.R, 400);
+            R = new Spell(SpellSlot.R, 375);
+            R.SetSkillshot(.5f, 375, int.MaxValue, false, SkillshotType.SkillshotCircle);
 
             ignite = Player.GetSpellSlot("summonerdot");
 
@@ -258,6 +259,8 @@ namespace EkkoGod
             if (target == null)
                 return;
 
+            var rdelay = R.GetPrediction(target).UnitPosition;
+
             if (useQ && Q.IsReady())
             {
                 Q.CastIfHitchanceEquals(target, HitChance.High);
@@ -270,7 +273,7 @@ namespace EkkoGod
 
             if (useRKillable && R.IsReady() && useW2)
             {
-                if (target.Distance(ghost.Position) <= 375)
+                if (rdelay.Distance(ghost.Position) <= R.Range)
                 {
                     if (ComboDamage(target) >= target.Health && Player.Distance(ghost.Position) < W.Range)
                     {
@@ -282,7 +285,7 @@ namespace EkkoGod
 
             else if (useRKillable && R.IsReady())
             {
-                if (target.Distance(ghost.Position) <= 375)
+                if (rdelay.Distance(ghost.Position) <= R.Range)
                 {
                     if (ComboDamage(target) >= target.Health)
                     {
