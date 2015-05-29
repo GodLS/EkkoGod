@@ -86,7 +86,7 @@ namespace EkkoGod
             Config.AddSubMenu(drawingsMenu);
 
             var miscMenu = new Menu("Misc", "Misc");
-            miscMenu.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
+            miscMenu.AddItem(new MenuItem("Killsteal", "KS with Q").SetValue(true));
             miscMenu.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             miscMenu.AddItem(new MenuItem("WCC", "Cast W on Immobile").SetValue(true));
             miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
@@ -201,9 +201,9 @@ namespace EkkoGod
            {
                foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady()))
                {
-                   if (target.IsStunned || target.IsRooted)
+                   if (target.HasBuffOfType(BuffType.Taunt) || target.HasBuffOfType(BuffType.Suppression) || target.HasBuffOfType(BuffType.Snare) || target.HasBuffOfType(BuffType.Knockup) || target.HasBuffOfType(BuffType.Fear) || target.HasBuffOfType(BuffType.Charm) || target.HasBuffOfType(BuffType.Stun))
                    {
-                       W.Cast(target.Position);
+                       W.Cast(target.ServerPosition);
                    }
                }
            }
@@ -211,7 +211,7 @@ namespace EkkoGod
 
        private static void Killsteal()
        {
-           var KS = Config.Item("QKS").GetValue<bool>();
+           var KS = Config.Item("Killsteal").GetValue<bool>();
            if (KS && !Player.IsDead)
            {
                foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
@@ -266,7 +266,7 @@ namespace EkkoGod
             {
                 if (target.Distance(ghost.Position) <= 400)
                 {
-                    if (ComboDamage(target) >= target.Health)
+                    if (ComboDamage(target) >= target.Health && Player.Distance(ghost.Position) < W.Range)
                     {
                         W.Cast(ghost.Position);
                         R.Cast();
@@ -293,7 +293,7 @@ namespace EkkoGod
                 }
             }
 
-            if (useRAoE && R.IsReady() && enemyCount >= AoECount.Value && useW && W.IsReady())
+            if (useRAoE && R.IsReady() && enemyCount >= AoECount.Value && useW && W.IsReady() && Player.Distance(ghost.Position) < W.Range)
             {
                 W.Cast(ghost.Position);
                 R.Cast();
