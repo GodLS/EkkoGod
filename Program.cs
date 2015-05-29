@@ -59,6 +59,7 @@ namespace EkkoGod
             comboMenu.AddItem(new MenuItem("UseQCombo", "Use Q in Combo").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo", "Cast W before R in AoE").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo2", "Cast W before R in Combo Killable").SetValue(true));
+            comboMenu.AddItem(new MenuItem("UseECombo", "Use E in Combo").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseRKillable", "Use R if Combo Killable").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseRatHP", "Use R at %HP").SetValue(true));
             comboMenu.AddItem(new MenuItem("HP", "HP").SetValue(new Slider(30, 0, 100)));
@@ -67,7 +68,8 @@ namespace EkkoGod
             Config.AddSubMenu(comboMenu);
 
             var harassMenu = new Menu("Harass", "Harass");
-            harassMenu.AddItem(new MenuItem("useQHarass", "Use Q in Harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("UseQHarass", "Use Q in Harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("UseEHarass", "Use E in Harass").SetValue(true));
             harassMenu.AddItem(new MenuItem("harassMana", "Mana Manager (%)").SetValue(new Slider(40, 1, 100)));
             Config.AddSubMenu(harassMenu);
 
@@ -83,12 +85,14 @@ namespace EkkoGod
             drawingsMenu.AddItem(dmgAfterCombo);
             Config.AddSubMenu(drawingsMenu);
 
-            Config.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
-            Config.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
-            Config.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
-            Config.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(false));
-            Config.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
-            Config.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
+            var miscMenu = new Menu("Misc", "Misc");
+            miscMenu.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
+            miscMenu.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
+            miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
+            miscMenu.AddItem(new MenuItem("WCC", "Cast W on Immobile").SetValue(true));
+            miscMenu.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(false));
+            miscMenu.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
+            miscMenu.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
 
             //Config.AddItem(new MenuItem("eToMinion", "E Minion After Manual E if Target Far").SetValue(true));
 
@@ -184,7 +188,24 @@ namespace EkkoGod
             }
 
             Killsteal();
+            WCC();
             //RSafe();
+        }
+
+        private static void WCC()
+        {
+            var WCC = Config.Item("WCC").GetValue<bool>();
+            if (WCC)
+            {
+                foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady()))
+                {
+                    var pred = W.GetPrediction(target);
+                    if (pred.Hitchance == HitChance.Immobile)
+                    {
+                        W.Cast(target.Position);
+                    }
+                }
+            }
         }
 
         private static void Killsteal()
@@ -199,6 +220,8 @@ namespace EkkoGod
             }
         }
 
+        
+
         //private static void RSafe()
         //{
         //    if (R.IsReady() && Player.HasBuff("zedulttargetmark")) //stupid idea idk what to do tho
@@ -211,6 +234,7 @@ namespace EkkoGod
         {
             var useQ = Config.Item("UseQCombo").GetValue<bool>();
             var useW = Config.Item("UseWCombo").GetValue<bool>();
+            var useE = Config.Item("UseECombo").GetValue<bool>();
             var useRKillable = Config.Item("UseRKillable").GetValue<bool>();
             var useRatHP = Config.Item("UseRatHP").GetValue<bool>();
             var HP = Config.Item("HP").GetValue<Slider>();
@@ -232,6 +256,11 @@ namespace EkkoGod
             if (useQ && Q.IsReady())
             {
                 Q.CastIfHitchanceEquals(target, HitChance.High);
+            }
+
+            if (useE && E.IsReady())
+            {
+                E.Cast(Game.CursorPos);
             }
 
             if (useRKillable && R.IsReady() && useW2)
@@ -286,7 +315,8 @@ namespace EkkoGod
         {
 
             var mana = Config.Item("harassMana").GetValue<Slider>().Value;
-            var useQ = Config.Item("useQHarass").GetValue<bool>();
+            var useQ = Config.Item("UseQHarass").GetValue<bool>();
+            var useE = Config.Item("UseEHarass").GetValue<bool>();
 
             if (Player.ManaPercent < mana)
                 return;
@@ -298,6 +328,11 @@ namespace EkkoGod
             if (useQ && Q.IsReady())
             {
                 Q.Cast(target);
+            }
+
+            if (useE && E.IsReady())
+            {
+                E.Cast(Game.CursorPos);
             }
         }
 
