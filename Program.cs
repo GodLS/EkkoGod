@@ -74,7 +74,7 @@ namespace EkkoGod
             Config.AddSubMenu(harassMenu);
 
             var drawingsMenu = new Menu("Drawings", "Drawings");
-            drawingsMenu.AddItem(new MenuItem("drawQ", "Q range").SetValue(new Circle(true, Color.FromArgb(100, 255, 255, 255))));
+            drawingsMenu.AddItem(new MenuItem("drawQ", "Q range (also is dash+leap range)").SetValue(new Circle(true, Color.FromArgb(100, 255, 255, 255))));
             drawingsMenu.AddItem(new MenuItem("drawW", "W range").SetValue(new Circle(true, Color.FromArgb(100, 255, 255, 255))));
             drawingsMenu.AddItem(new MenuItem("drawE", "E (leap) range").SetValue(new Circle(true, Color.FromArgb(100, 255, 255, 255))));
             drawingsMenu.AddItem(new MenuItem("drawGhost", "R range (around ghost)").SetValue(new Circle(true, Color.FromArgb(100, 255, 255, 255))));
@@ -178,6 +178,12 @@ namespace EkkoGod
 
         private static void OnUpdate(EventArgs args)
         {
+
+            if (Player.IsDead)
+            {
+                return;
+            }
+
             switch (Orbwalker.ActiveMode)
             {
                 case Orbwalking.OrbwalkingMode.Combo:
@@ -199,7 +205,7 @@ namespace EkkoGod
            var WCC = Config.Item("WCC").GetValue<bool>();
            if (WCC)
            {
-               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && Player.Distance(enemy.Position) <= W.Range && W.IsReady() && Player.Distance(enemy.Position) < W.Range))
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && !enemy.IsDead && Player.Distance(enemy.Position) <= W.Range && W.IsReady() && Player.Distance(enemy.Position) < W.Range))
                {
                    if (target.HasBuffOfType(BuffType.Taunt) || target.HasBuffOfType(BuffType.Suppression) || target.HasBuffOfType(BuffType.Snare) || target.HasBuffOfType(BuffType.Knockup) || target.HasBuffOfType(BuffType.Fear) || target.HasBuffOfType(BuffType.Charm) || target.HasBuffOfType(BuffType.Stun))
                    {
@@ -212,9 +218,9 @@ namespace EkkoGod
        private static void Killsteal()
        {
            var KS = Config.Item("Killsteal").GetValue<bool>();
-           if (KS && !Player.IsDead)
+           if (KS)
            {
-               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && !enemy.IsDead && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
                {
                    Q.Cast(target);
                }
@@ -245,7 +251,7 @@ namespace EkkoGod
             var UseIgnite = Config.Item("UseIgnite").GetValue<bool>();
             if (ghost != null)
             {
-                enemyCount += HeroManager.Enemies.Count(enemy => enemy.Distance(ghost.Position) <= 400);
+                enemyCount += HeroManager.Enemies.Count(enemy => enemy.Distance(ghost.Position) <= 375);
             }
 
             var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Magical);
@@ -264,7 +270,7 @@ namespace EkkoGod
 
             if (useRKillable && R.IsReady() && useW2)
             {
-                if (target.Distance(ghost.Position) <= 400)
+                if (target.Distance(ghost.Position) <= 375)
                 {
                     if (ComboDamage(target) >= target.Health && Player.Distance(ghost.Position) < W.Range)
                     {
@@ -276,7 +282,7 @@ namespace EkkoGod
 
             else if (useRKillable && R.IsReady())
             {
-                if (target.Distance(ghost.Position) <= 400)
+                if (target.Distance(ghost.Position) <= 375)
                 {
                     if (ComboDamage(target) >= target.Health)
                     {
