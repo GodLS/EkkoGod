@@ -86,7 +86,7 @@ namespace EkkoGod
             Config.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             Config.AddItem(new MenuItem("QKS", "KS with Q").SetValue(true));
             Config.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
-            Config.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(true));
+            Config.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(false));
             Config.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
             Config.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
 
