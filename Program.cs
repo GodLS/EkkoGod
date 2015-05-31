@@ -18,6 +18,7 @@ namespace EkkoGod
         private static Spell Q, W, E, R;
         private static Orbwalking.Orbwalker Orbwalker;
         private static SpellSlot ignite;
+        private static Obj_AI_Minion jumpfar;
 
         static void Main(string[] args)
         {
@@ -42,7 +43,7 @@ namespace EkkoGod
             E = new Spell(SpellSlot.E, 450);
 
             R = new Spell(SpellSlot.R, 375);
-            R.SetSkillshot(.5f, 375, int.MaxValue, false, SkillshotType.SkillshotCircle);
+            R.SetSkillshot(.3f, 375, int.MaxValue, false, SkillshotType.SkillshotCircle);
 
             ignite = Player.GetSpellSlot("summonerdot");
 
@@ -57,21 +58,26 @@ namespace EkkoGod
             Config.AddSubMenu(TargetSelectorMenu);
 
             var comboMenu = new Menu("Combo", "Combo");
-            comboMenu.AddItem(new MenuItem("UseQCombo", "Use Q in Combo").SetValue(true));
+            comboMenu.AddItem(new MenuItem("UseQCombo", "Use Q in combo").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo", "Cast W before R in AoE").SetValue(true));
-            comboMenu.AddItem(new MenuItem("UseWCombo2", "Cast W before R in Combo Killable").SetValue(true));
-            comboMenu.AddItem(new MenuItem("UseECombo", "Use E in Combo").SetValue(true));
-            comboMenu.AddItem(new MenuItem("UseRKillable", "Use R if Combo Killable").SetValue(true));
-            comboMenu.AddItem(new MenuItem("UseRatHP", "Use R at %HP").SetValue(true));
-            comboMenu.AddItem(new MenuItem("HP", "HP").SetValue(new Slider(30, 0, 100)));
-            comboMenu.AddItem(new MenuItem("UseRAoE", "Use R AoE").SetValue(true));
-            comboMenu.AddItem(new MenuItem("AoECount", "Minimum targets to R").SetValue(new Slider(3, 1, 5)));
+            comboMenu.AddItem(new MenuItem("UseWCombo2", "Cast W before R in combo killable").SetValue(true));
+            comboMenu.AddItem(new MenuItem("UseECombo", "Use E in combo").SetValue(true));
             Config.AddSubMenu(comboMenu);
 
+            var RMenu = new Menu("R Options", "RMenu");
+            RMenu.AddItem(new MenuItem("UseRKillable", "Use R if combo killable").SetValue(true));
+            RMenu.AddItem(new MenuItem("UseRatHP", "Use R at %HP").SetValue(true));
+            RMenu.AddItem(new MenuItem("HP", "HP").SetValue(new Slider(30, 0, 100)));
+            RMenu.AddItem(new MenuItem("UseRAoE", "Use R AoE").SetValue(true));
+            RMenu.AddItem(new MenuItem("AoECount", "Minimum targets to R").SetValue(new Slider(3, 1, 5)));
+            RMenu.AddItem(new MenuItem("UseRifDie", "Use R if (targeted?) ability will kill me").SetValue(true));
+            RMenu.AddItem(new MenuItem("UseRDangerous", "Use R on ZedR, ViR, etc.").SetValue(true));
+            comboMenu.AddSubMenu(RMenu);
+
             var harassMenu = new Menu("Harass", "Harass");
-            harassMenu.AddItem(new MenuItem("UseQHarass", "Use Q in Harass").SetValue(true));
-            harassMenu.AddItem(new MenuItem("UseEHarass", "Use E in Harass").SetValue(true));
-            harassMenu.AddItem(new MenuItem("harassMana", "Mana Manager (%)").SetValue(new Slider(40, 1, 100)));
+            harassMenu.AddItem(new MenuItem("UseQHarass", "Use Q in harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("UseEHarass", "Use E in harass").SetValue(true));
+            harassMenu.AddItem(new MenuItem("HarassMana", "Mana manager (%)").SetValue(new Slider(40, 1, 100)));
             Config.AddSubMenu(harassMenu);
 
             var drawingsMenu = new Menu("Drawings", "Drawings");
@@ -86,12 +92,18 @@ namespace EkkoGod
             drawingsMenu.AddItem(dmgAfterCombo);
             Config.AddSubMenu(drawingsMenu);
 
+            var fleeMenu = new Menu("Flee", "Flee");
+            fleeMenu.AddItem(new MenuItem("Escape", "Escape").SetValue(new KeyBind("Z".ToCharArray()[0], KeyBindType.Press)));
+            fleeMenu.AddItem(new MenuItem("QFlee", "Q enemy while fleeing").SetValue(true));
+            fleeMenu.AddItem(new MenuItem("EFlee", "Jump to furthest minion w/ E").SetValue(true));
+            Config.AddSubMenu(fleeMenu);
+
             var miscMenu = new Menu("Misc", "Misc");
             miscMenu.AddItem(new MenuItem("Killsteal", "KS with Q").SetValue(true));
             miscMenu.AddItem(new MenuItem("WSelf", "W Self on Gapclose").SetValue(true));
             miscMenu.AddItem(new MenuItem("WCC", "Cast W on Immobile").SetValue(true));
             miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
-            miscMenu.AddItem(new MenuItem("---", "--underneath not functional--").SetValue(false));
+            miscMenu.AddItem(new MenuItem("---", "--underneath not functional--"));
             miscMenu.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
             miscMenu.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
             Config.AddSubMenu(miscMenu);
@@ -105,8 +117,6 @@ namespace EkkoGod
             Drawing.OnDraw += OnDraw;
             Obj_AI_Base.OnProcessSpellCast += Obj_AI_Hero_OnProcessSpellCast;
             AntiGapcloser.OnEnemyGapcloser += AntiGapcloser_OnEnemyGapcloser;
-
-
         }
 
         #region damagecalcscreditto1337/worstping
@@ -169,7 +179,10 @@ namespace EkkoGod
             dmg += GetDamageQ(hero);
             dmg += GetDamageE(hero);
             dmg += GetDamageR(hero);
-            dmg += 15 + (12 * Player.Level) + Player.FlatMagicDamageMod; // passive damage
+            if (!hero.HasBuff("EkkoStunMarker"))
+            {
+                dmg += 15 + (12 * Player.Level) + Player.TotalMagicalDamage * .7f; // passive damage
+            }
             if (Player.Spellbook.CanUseSpell(Player.GetSpellSlot("summonerdot")) == SpellState.Ready)
             {
                 dmg += Player.GetSummonerSpellDamage(hero, Damage.SummonerSpell.Ignite);
@@ -193,15 +206,66 @@ namespace EkkoGod
                 case Orbwalking.OrbwalkingMode.Mixed:
                     Harass();
                     break;
+                case Orbwalking.OrbwalkingMode.None:
+                    if (Config.Item("Escape").GetValue<KeyBind>().Active)
+                    {
+                        Escape();
+                    }
+                    break;
             }
 
             WCC();
             Killsteal();
-            
-            //RSafe();
+            RSafe();
         }
 
-       private static void WCC()
+        private static void Escape() // some credits to 1337 :v) (also not as good, me suck)
+        {
+            var target = TargetSelector.GetTarget(Q.Range, TargetSelector.DamageType.Magical);
+            var enemies = HeroManager.Enemies.Where(t => t.IsValidTarget() && t.Distance(Player.Position) <= W.Range);
+
+            if (Q.IsReady() && target.IsValidTarget() && Config.Item("QFlee").GetValue<bool>())
+            {
+                Q.Cast(target);
+            }
+
+            if (E.IsReady() && Config.Item("EFlee").GetValue<bool>())
+            {
+                E.Cast(Game.CursorPos);
+                var enemy = enemies.OrderBy(t => t.Distance(Player.Position)).FirstOrDefault();
+                if (enemy != null)
+                {
+                    var minion = ObjectManager.Get<Obj_AI_Minion>()
+                        .Where(m => m.Distance(enemy.Position) <= Q.Range)
+                        .OrderByDescending(m => m.Distance(Player.Position)).FirstOrDefault();
+
+                    if (minion.IsValidTarget() && minion != null)
+                    {
+                        jumpfar = minion;
+                    }
+                }
+
+                else if (enemy == null)
+                {
+                    var minion = ObjectManager.Get<Obj_AI_Minion>()
+                        .Where(m => m.Distance(Player.Position) <= Q.Range)
+                        .OrderByDescending(m => m.Distance(Player.Position)).FirstOrDefault();
+
+                    if (minion.IsValidTarget() && minion != null)
+                    {
+                        jumpfar = minion;
+                    }
+                }
+            }
+
+            if (Player.AttackRange == 425 && jumpfar.IsValidTarget())
+            {
+                Player.IssueOrder(GameObjectOrder.AttackUnit, jumpfar);
+            }
+            Orbwalking.MoveTo(Game.CursorPos);
+        }
+
+        private static void WCC()
        {
            var WCC = Config.Item("WCC").GetValue<bool>();
            if (WCC)
@@ -216,25 +280,26 @@ namespace EkkoGod
            }
        }
 
-       private static void Killsteal()
+        private static void Killsteal()
        {
            var KS = Config.Item("Killsteal").GetValue<bool>();
            if (KS)
            {
-               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && !enemy.IsDead && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
+               foreach (var target in HeroManager.Enemies.Where(enemy => enemy.IsVisible && enemy.IsValidTarget() && GetDamageQ(enemy) > enemy.Health && Player.Distance(enemy.Position) <= Q.Range && Q.IsReady()))
                {
                    Q.Cast(target);
                }
            }
        }
-
-        //private static void RSafe()
-        //{
-        //    if (R.IsReady() && Player.HasBuff("zedulttargetmark")) //stupid idea idk what to do tho
-        //    {
-        //        Utility.DelayAction.Add(0, () => R.Cast());
-        //    }
-        //}
+            
+        private static void RSafe()
+        {
+            var danger = Config.Item("UseRDangerous").GetValue<bool>();
+            if (R.IsReady() && Player.HasBuff("zedulttargetmark") && danger) //stupid idea idk what to do tho
+            {
+                Utility.DelayAction.Add(3500, () => R.Cast());
+            }
+        }
 
         private static void Combo()
         {
@@ -322,7 +387,7 @@ namespace EkkoGod
         private static void Harass()
         {
 
-            var mana = Config.Item("harassMana").GetValue<Slider>().Value;
+            var mana = Config.Item("HarassMana").GetValue<Slider>().Value;
             var useQ = Config.Item("UseQHarass").GetValue<bool>();
             var useE = Config.Item("UseEHarass").GetValue<bool>();
 
@@ -357,29 +422,31 @@ namespace EkkoGod
 
         private static void Obj_AI_Hero_OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
+            var userdie = Config.Item("UseRifDie").GetValue<bool>();
+            var danger = Config.Item("UseRDangerous").GetValue<bool>();
+
             if (sender.IsMe && args.SData.Name == "EkkoE")
             {
                 // make sure orbwalker doesnt mess up after casting E
                 Utility.DelayAction.Add(250, Orbwalking.ResetAutoAttackTimer);
-
-                //var eToMinion = Config.Item("eToMinion").GetValue<bool>();
-
-                //Obj_AI_Base cloesestminiontotarget = ObjectManager.Get<Obj_AI_Base>().Where(x => x.IsMinion && x.IsEnemy).MinOrDefault(x => x.Distance(args.Target.Position));
-
-                //if (args.Target != null && Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo && eToMinion)
-                //{
-                //    ObjectManager.Player.IssueOrder(GameObjectOrder.AttackUnit, cloesestminiontotarget);
-                //}
             }
 
-            //if (R.IsReady() && args.SData.Name == "ViR" && howthefuckdoiknowifimthetarget)
-            //{
-            //    Utility.DelayAction.Add(100, () => R.Cast());
+            if (R.IsReady() && args.End.Distance(Player.Position) < 150 && args.SData.Name == "ViR" && danger)
+            {
+                Utility.DelayAction.Add(250, () => R.Cast());
+            }
 
-            //}
-
-
+            if (R.IsReady() && sender.IsEnemy && args.Target.IsMe && userdie)
+            {
+                var dmg = sender.GetDamageSpell(Player, args.SData.Name);
+                if (dmg.CalculatedDamage >= Player.Health - 50)
+                {
+                    Utility.DelayAction.Add(0, () => R.Cast());
+                }
+            }
         }
+
+       
 
         private static void OnDraw(EventArgs args)
         {
