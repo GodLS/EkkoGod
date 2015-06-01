@@ -58,6 +58,7 @@ namespace EkkoGod
             Config.AddSubMenu(TargetSelectorMenu);
 
             var comboMenu = new Menu("Combo", "Combo");
+            comboMenu.AddItem(new MenuItem("QMode", "QMode").SetValue(new StringList(new[] { "QE", "EQ" }, 0)));
             comboMenu.AddItem(new MenuItem("UseQCombo", "Use Q in combo").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo", "Cast W before R in AoE").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo2", "Cast W before R in combo killable").SetValue(true));
@@ -70,7 +71,7 @@ namespace EkkoGod
             RMenu.AddItem(new MenuItem("HP", "HP").SetValue(new Slider(30, 0, 100)));
             RMenu.AddItem(new MenuItem("UseRAoE", "Use R AoE").SetValue(true));
             RMenu.AddItem(new MenuItem("AoECount", "Minimum targets to R").SetValue(new Slider(3, 1, 5)));
-            RMenu.AddItem(new MenuItem("UseRifDie", "Use R if (targeted?) ability will kill me").SetValue(true));
+            RMenu.AddItem(new MenuItem("UseRifDie", "Use R if ability will kill me").SetValue(true));
             RMenu.AddItem(new MenuItem("UseRDangerous", "Use R on ZedR, ViR, etc.").SetValue(true));
             comboMenu.AddSubMenu(RMenu);
 
@@ -105,7 +106,6 @@ namespace EkkoGod
             miscMenu.AddItem(new MenuItem("UseIgnite", "Ignite if Combo Killable").SetValue(true));
             miscMenu.AddItem(new MenuItem("---", "--underneath not functional--"));
             miscMenu.AddItem(new MenuItem("123", "E Minion After Manual E if Target Far").SetValue(false));
-            miscMenu.AddItem(new MenuItem("1234", "R dangerous spells").SetValue(false));
             Config.AddSubMenu(miscMenu);
 
             //Config.AddItem(new MenuItem("eToMinion", "E Minion After Manual E if Target Far").SetValue(true));
@@ -326,15 +326,32 @@ namespace EkkoGod
 
             var rdelay = R.GetPrediction(target).UnitPosition;
 
-            if (useQ && Q.IsReady())
+            if (Config.Item("QMode").GetValue<StringList>().SelectedValue == "QE")
             {
-                Q.CastIfHitchanceEquals(target, HitChance.High);
+                if (useQ && Q.IsReady())
+                {
+                    Q.CastIfHitchanceEquals(target, HitChance.High);
+                }
+
+                if (useE && E.IsReady())
+                {
+                    E.Cast(Game.CursorPos);
+                }
             }
 
-            if (useE && E.IsReady())
+            else
             {
-                E.Cast(Game.CursorPos);
+                if (useE && E.IsReady())
+                {
+                    E.Cast(Game.CursorPos);
+                }
+
+                if (!E.IsReady() && !Player.HasBuff("ekkoeattackbuff"))
+                {
+                    Q.CastIfHitchanceEquals(target, HitChance.High);         
+                }
             }
+
 
             if (useRKillable && R.IsReady() && useW2)
             {
@@ -422,13 +439,20 @@ namespace EkkoGod
 
         private static void Obj_AI_Hero_OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
+            if (args.Target == null)
+                return;
+
             var userdie = Config.Item("UseRifDie").GetValue<bool>();
-            var danger = Config.Item("UseRDangerous").GetValue<bool>();
+            var danger = Config.Item("UseRDangerous").GetValue<bool>();        
 
             if (sender.IsMe && args.SData.Name == "EkkoE")
             {
                 // make sure orbwalker doesnt mess up after casting E
-                Utility.DelayAction.Add(250, Orbwalking.ResetAutoAttackTimer);
+                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo || Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
+                {
+                    Utility.DelayAction.Add(100, () =>
+                        Player.IssueOrder(GameObjectOrder.AttackUnit, args.Target));
+                }                
             }
 
             if (R.IsReady() && args.End.Distance(Player.Position) < 150 && args.SData.Name == "ViR" && danger)
