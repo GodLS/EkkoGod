@@ -465,10 +465,14 @@ namespace EkkoGod
             if (sender.IsMe && args.SData.Name == "EkkoE")
             {
                 // make sure orbwalker doesnt mess up after casting E
-                if (enemy == null)
-                    return;
 
-                Utility.DelayAction.Add((int)(Math.Ceiling(Game.Ping / 2f) + 350), () => Player.IssueOrder(GameObjectOrder.AttackUnit, enemy));                            
+                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo || Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
+                {
+                    if (enemy == null)
+                        return;
+
+                    Utility.DelayAction.Add((int)(Math.Ceiling(Game.Ping / 2f) + 350), () => Player.IssueOrder(GameObjectOrder.AttackUnit, enemy));
+                }     
             }
 
             if (args.Target == null)
