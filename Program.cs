@@ -58,7 +58,7 @@ namespace EkkoGod
             Config.AddSubMenu(TargetSelectorMenu);
 
             var comboMenu = new Menu("Combo", "Combo");
-            comboMenu.AddItem(new MenuItem("QMode", "QMode").SetValue(new StringList(new[] { "QE", "EQ" }, 0)));
+            comboMenu.AddItem(new MenuItem("QMode", "QMode").SetValue(new StringList(new[] { "QE", "EQ", "EQ Hyper Speed (test)" }, 0)));
             comboMenu.AddItem(new MenuItem("UseQCombo", "Use Q in combo").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo", "Cast W before R in AoE").SetValue(true));
             comboMenu.AddItem(new MenuItem("UseWCombo2", "Cast W before R in combo killable").SetValue(true));
@@ -339,16 +339,34 @@ namespace EkkoGod
                 }
             }
 
-            else
+            else if (Config.Item("QMode").GetValue<StringList>().SelectedValue == "EQ")
             {
                 if (useE && E.IsReady())
                 {
                     E.Cast(Game.CursorPos);
                 }
 
-                if (!E.IsReady() && !Player.HasBuff("ekkoeattackbuff"))
+                if (useQ && Q.IsReady() && !E.IsReady() && !Player.HasBuff("ekkoeattackbuff"))
                 {
                     Q.CastIfHitchanceEquals(target, HitChance.High);         
+                }
+            }
+
+            else if (Config.Item("QMode").GetValue<StringList>().SelectedValue == "EQ Hyper Speed (test)")
+            {
+                if (useE && E.IsReady())
+                {
+                    E.Cast(Game.CursorPos);
+                }
+
+                if (useQ && Q.IsReady() && !E.IsReady() && Player.HasBuff("ekkoeattackbuff"))
+                {
+                    Q.CastIfHitchanceEquals(target, HitChance.VeryHigh);
+                }
+
+                else if (useQ && Q.IsReady() && !E.IsReady())
+                {
+                    Q.CastIfHitchanceEquals(target, HitChance.High);
                 }
             }
 
@@ -439,21 +457,22 @@ namespace EkkoGod
 
         private static void Obj_AI_Hero_OnProcessSpellCast(Obj_AI_Base sender, GameObjectProcessSpellCastEventArgs args)
         {
-            if (args.Target == null)
-                return;
 
+            var enemy = TargetSelector.GetTarget(E.Range + 425, TargetSelector.DamageType.Magical);
             var userdie = Config.Item("UseRifDie").GetValue<bool>();
             var danger = Config.Item("UseRDangerous").GetValue<bool>();        
 
             if (sender.IsMe && args.SData.Name == "EkkoE")
             {
                 // make sure orbwalker doesnt mess up after casting E
-                if (Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Combo || Orbwalker.ActiveMode == Orbwalking.OrbwalkingMode.Mixed)
-                {
-                    Utility.DelayAction.Add(100, () =>
-                        Player.IssueOrder(GameObjectOrder.AttackUnit, args.Target));
-                }                
+                if (enemy == null)
+                    return;
+
+                Utility.DelayAction.Add((int)(Math.Ceiling(Game.Ping / 2f) + 350), () => Player.IssueOrder(GameObjectOrder.AttackUnit, enemy));                            
             }
+
+            if (args.Target == null)
+                return;
 
             if (R.IsReady() && args.End.Distance(Player.Position) < 150 && args.SData.Name == "ViR" && danger)
             {
